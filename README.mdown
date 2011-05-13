@@ -1,2 +1,23 @@
-A script for converting the ND ProfessorShip collection of pages to a
-processable CSV.
+**THIS PROJECT IS IN PROCESS, AS SUCH IT IS NOT COMPLETE**
+
+This repository provides the necessary scripts for converting the existing
+http://professorships.nd.edu professorship pages into a Conductor data store.
+The goal of the custom data store is to provide a better means of updating
+the data as well as a more robust means of looking at the data.
+
+What to do
+==========
+
+You will need ruby and rubygems installed
+
+With those two components install, make sure you have the bundler gem.  Install by executing the following command:
+
+    $ gem install bundler
+
+To make sure all the requisite gems are present:
+
+    $ cd PROJECT_DIRECTORY && bundle install
+
+To download the pages, execute the following in the projects root directory:
+
+    $ bundle exec ruby lib/get_pages.rb
