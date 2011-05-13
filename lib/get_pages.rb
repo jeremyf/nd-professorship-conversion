@@ -1,17 +1,17 @@
 require 'rest_client'
 require 'json'
+require 'active_support/core_ext/hash'
 
 def get_json_response_for(path)
   RestClient.get("http://#{File.join('professorships.nd.edu', path).sub(/\/$/, '')}.js", {:params => {'children' => 'true'}, :accept => :json})
 end
 
-puts get_json_response_for('/directorships')
-exit(1)
-
 def parse_json_for(path)
   JSON.parse(get_json_response_for(path).body)
 end
 
+# Realistically, instead of storing these in memory, we would
+# store them in a more permanent location
 @chairs = {}
 @directorships = {}
 
@@ -27,16 +27,18 @@ parse_json_for('/by-college')['children'].each do |college|
     prof_last_name  = professorship['meta_attributes']['lastnameprof'].strip
     prof_biography  = professorship['meta_attributes']['bio'].strip
     chair_last_name = professorship['meta_attributes']['lastnametitle'].strip
+    permalink       = professorship['permalink']
     prof_first_name = prof_name.sub(prof_last_name, '').strip
-
-    @chairs[chair_name] = {
-      'instances'       => ((@chairs[chair_name]['instances'] || 0) + 1),
+    @chairs[chair_name] ||= []
+    @chairs[chair_name] << {
       'chair_name'      => chair_name,
+      'prof_full_name'  => prof_name,
       'prof_first_name' => prof_first_name,
       'prof_last_name'  => prof_last_name,
       'prof_biography'  => prof_biography,
       'prof_photo'      => prof_photo,
       'chair_last_name' => chair_last_name,
+      'permalink'       => permalink,
       'chair'           => true,
       'directorship'    => false,
     }
@@ -51,17 +53,26 @@ parse_json_for('/directorships')['children'].each do |directorship|
   prof_last_name  = directorship['meta_attributes']['lastnameprof'].strip
   prof_biography  = directorship['meta_attributes']['bio'].strip
   chair_last_name = directorship['meta_attributes']['lastnametitle'].strip
+  permalink       = directorship['permalink']
   prof_first_name = prof_name.sub(prof_last_name, '').strip
 
-  @directorships[chair_name] = {
-    'instances'       => ((@directorships[chair_name]['instances'] || 0) + 1),
+  @directorships[chair_name] ||= []
+  @directorships[chair_name] << {
     'chair_name'      => chair_name,
+    'prof_full_name'  => prof_name,
     'prof_first_name' => prof_first_name,
     'prof_last_name'  => prof_last_name,
     'prof_biography'  => prof_biography,
     'prof_photo'      => prof_photo,
     'chair_last_name' => chair_last_name,
+    'permalink'       => permalink,
     'chair'           => false,
     'directorship'    => true,
   }
 end
+
+# Looks like we have duplicate data to consider.  This is how we are going to
+# check
+@duplicate_chairs = @chairs.select {|k,v| v.size > 1}
+@duplicate_directorships = @directorships.select {|k,v| v.size > 1}
+
