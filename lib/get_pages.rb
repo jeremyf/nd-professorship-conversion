@@ -2,6 +2,7 @@ require 'rest_client'
 require 'json'
 require 'active_support/core_ext/hash'
 require 'yaml'
+require 'highline'
 
 def get_json_response_for(path)
   RestClient.get("http://#{File.join('professorships.nd.edu', path).sub(/\/$/, '')}.js", {:params => {'children' => 'true'}, :accept => :json})
@@ -95,4 +96,50 @@ end
 
 File.open(File.join(File.dirname(__FILE__), '..','tmp/directorships.yml'), 'w+') do |file|
   file.puts(YAML.dump(@directorships))
+end
+
+
+@database_id = 6
+@highline = HighLine.new
+
+def net_id
+  @net_id ||= @highline.ask(@highline.color("Net ID: ", :black, :on_yellow))
+end
+
+def password
+  @password ||= @highline.ask(@highline.color("Password: ", :black, :on_yellow)) { |q| q.echo = "*" }
+end
+net_id
+password
+@host = 'localhost:3000'
+@protocol = 'http'
+
+[@directorships, @chairs].each do |collection|
+  collection.each do |chair_name, entries|
+    entries.each_with_index do |entry, index|
+      begin
+        RestClient.post(
+        "#{@protocol}://#{@net_id}:#{@password}@#{@host}/admin/data_store_models/#{@database_id}/records",
+        {
+          "record" => {
+            'directorship'            => entry['directorship'],
+            'professorship_title'     => entry['chair_name'],
+            'professorship_last_name' => entry['chair_last_name'],
+            'professor_first_name'    => entry['prof_first_name'],
+            'professor_last_name'     => entry['prof_last_name'],
+            'biography'               => entry['prof_biography'],
+            'photo_upload'            => entry['photo_upload'],
+            'college'                 => entry['college_id'],
+            'sequence'                => index + 1
+          }
+        }, {:accept => :xml}
+        )
+      rescue RestClient::Found => e
+        puts e.response.headers[:location]
+      rescue RestClient::RequestFailed => e
+        # we have a bigger problem
+        require 'ruby-debug'; debugger; true;
+      end
+    end
+  end
 end
